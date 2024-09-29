@@ -6,7 +6,7 @@ import lombok.Setter;
 
 @Getter
 @Setter
-public class SignupRequestDto extends BaseModel {
+public class LogoutRequestDto extends BaseModel {
     private String email;
     private String password;
 }

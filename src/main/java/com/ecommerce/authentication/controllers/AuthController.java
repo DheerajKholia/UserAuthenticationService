@@ -1,8 +1,12 @@
 package com.ecommerce.authentication.controllers;
 
-import com.ecommerce.authentication.dtos.LoginRequestDto;
-import com.ecommerce.authentication.dtos.SignupRequestDto;
-import com.ecommerce.authentication.dtos.UserDto;
+import com.ecommerce.authentication.dtos.*;
+import com.ecommerce.authentication.exceptions.UserAlreadyExistException;
+import com.ecommerce.authentication.models.User;
+import com.ecommerce.authentication.services.IAuthService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -15,14 +19,42 @@ public class AuthController {
     //Login
     //ForgotPassword
     //Logout
+    @Autowired
+    private IAuthService authService;
 
     @PostMapping("/signup")
-    public UserDto signup(@RequestBody SignupRequestDto signupRequestDto) {
-        return null;
+    public ResponseEntity<UserDto> signup(@RequestBody SignupRequestDto signupRequestDto) {
+        try {
+            User user = authService.signUp(signupRequestDto.getEmail(), signupRequestDto.getPassword());
+            if (user == null) {
+                throw new UserAlreadyExistException("Please try with different email");
+            }
+            return new ResponseEntity<>(from(user), HttpStatus.CREATED);
+        }catch (UserAlreadyExistException e) {
+            return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
+        }
     }
 
     @PostMapping("/login")
     public UserDto login(LoginRequestDto loginRequestDto) {
+        User user = authService.login(loginRequestDto.getEmail(), loginRequestDto.getPassword());
+        if (user == null) {
+            throw new RuntimeException("Invalid email or password");
+        }
+        return from(user);
+    }
+
+    public ResponseEntity<Boolean> logout(@RequestBody LogoutRequestDto logoutRequestDto){
         return null;
+    }
+    public ResponseEntity<String> forgotPassword(@RequestBody ForgotPasswordDto forgotPasswordDto){
+        return null;
+    }
+
+    private UserDto from(User user){
+        UserDto userDto = new UserDto();
+        userDto.setEmail(user.getEmail());
+        userDto.setRoles(user.getRoles());
+        return userDto;
     }
 }
