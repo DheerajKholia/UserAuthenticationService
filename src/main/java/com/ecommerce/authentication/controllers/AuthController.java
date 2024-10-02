@@ -4,9 +4,13 @@ import com.ecommerce.authentication.dtos.*;
 import com.ecommerce.authentication.exceptions.UserAlreadyExistException;
 import com.ecommerce.authentication.models.User;
 import com.ecommerce.authentication.services.IAuthService;
+import org.antlr.v4.runtime.misc.MultiMap;
+import org.antlr.v4.runtime.misc.Pair;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.querydsl.binding.MultiValueBinding;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.util.MultiValueMap;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -36,12 +40,13 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public UserDto login(LoginRequestDto loginRequestDto) {
-        User user = authService.login(loginRequestDto.getEmail(), loginRequestDto.getPassword());
+    public ResponseEntity<UserDto> login(LoginRequestDto loginRequestDto) {
+        Pair<User, MultiValueMap<String,String>> userWithHeaders = authService.login(loginRequestDto.getEmail(), loginRequestDto.getPassword());
+        User user = userWithHeaders.a;
         if (user == null) {
             throw new RuntimeException("Invalid email or password");
         }
-        return from(user);
+        return new ResponseEntity<>(from(user),userWithHeaders.b,HttpStatus.OK);
     }
 
     public ResponseEntity<Boolean> logout(@RequestBody LogoutRequestDto logoutRequestDto){
