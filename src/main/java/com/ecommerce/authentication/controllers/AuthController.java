@@ -1,6 +1,7 @@
 package com.ecommerce.authentication.controllers;
 
 import com.ecommerce.authentication.dtos.*;
+import com.ecommerce.authentication.exceptions.InvalidTokenException;
 import com.ecommerce.authentication.exceptions.UserAlreadyExistException;
 import com.ecommerce.authentication.models.User;
 import com.ecommerce.authentication.services.IAuthService;
@@ -47,6 +48,19 @@ public class AuthController {
             throw new RuntimeException("Invalid email or password");
         }
         return new ResponseEntity<>(from(user),userWithHeaders.b,HttpStatus.OK);
+    }
+
+    @PostMapping("/validate")
+    public ResponseEntity<Boolean> validateToken(@RequestBody ValidateTokenRequest validateTokenRequest){
+        try {
+            Boolean response = authService.validateToken(validateTokenRequest.getToken(), validateTokenRequest.getUserid());
+            if (response == Boolean.FALSE) {
+                throw new InvalidTokenException("Invalid token");
+            }
+            return new ResponseEntity<>(response, HttpStatus.OK);
+        }catch (InvalidTokenException e) {
+            return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
+        }
     }
 
     public ResponseEntity<Boolean> logout(@RequestBody LogoutRequestDto logoutRequestDto){

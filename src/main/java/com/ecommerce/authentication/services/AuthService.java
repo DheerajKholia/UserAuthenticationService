@@ -5,6 +5,8 @@ import com.ecommerce.authentication.models.SessionState;
 import com.ecommerce.authentication.models.User;
 import com.ecommerce.authentication.repositories.SessionRepo;
 import com.ecommerce.authentication.repositories.UserRepository;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.JwtParser;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.MacAlgorithm;
 import org.antlr.v4.runtime.misc.Pair;
@@ -32,6 +34,9 @@ public class AuthService implements IAuthService{
 
     @Autowired
     private SessionRepo sessionRepo;
+
+    @Autowired
+    private SecretKey secretKey;
 
     @Override
     public User signUp(String email, String password) {
@@ -74,8 +79,8 @@ public class AuthService implements IAuthService{
         claims.put("exp", nowInMillis+1000000);
 
 //        byte[] content = message.getBytes(StandardCharsets.UTF_8);
-        MacAlgorithm algorithm = Jwts.SIG.HS256;
-        SecretKey secretKey = algorithm.key().build();
+//        MacAlgorithm algorithm = Jwts.SIG.HS256;
+//        SecretKey secretKey = algorithm.key().build();
 
         //String token = Jwts.builder().content(content).signWith(secretKey).compact();
         String token = Jwts.builder().claims(claims).signWith(secretKey).compact();
@@ -90,5 +95,41 @@ public class AuthService implements IAuthService{
         sessionRepo.save(session);
 
         return new Pair<User,MultiValueMap<String,String>>(user,headers);
+    }
+
+    @Override
+    public Boolean validateToken(String token, Long userid) {
+        Optional<Session> optionalSession = sessionRepo.findByToken(token);
+        if (optionalSession.isEmpty()) {
+            System.out.println("Token not found");
+            return false;
+        }
+        Session session = optionalSession.get();
+//        if (session.getSessionState() != SessionState.ACTIVE) {
+//            System.out.println("Session not active");
+//            return false;
+//        }
+        String storedToken = session.getToken();
+        JwtParser parser = Jwts.parser().verifyWith(secretKey).build();
+        Claims claims = parser.parseSignedClaims(storedToken).getPayload();
+
+        Long tokenExpiryTime = (Long) claims.get("exp");
+        Long currentTime = System.currentTimeMillis();
+        System.out.println("Token expiry time : " + tokenExpiryTime);
+        System.out.println("Current time : " + currentTime);
+        if (tokenExpiryTime < currentTime) {
+            System.out.println("Token is expired");
+            //set state to expired in DB
+            return false;
+        }
+
+        User user = userRepository.findById(userid).get();
+        String email = user.getEmail();
+        String tokenEmail = (String) claims.get("email");
+        if(!email.equals(tokenEmail)) {
+            System.out.println("Email does not match");
+            return false;
+        }
+        return true;
     }
 }

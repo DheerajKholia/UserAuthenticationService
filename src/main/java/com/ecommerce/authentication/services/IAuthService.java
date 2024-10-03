@@ -7,4 +7,6 @@ import org.springframework.util.MultiValueMap;
 public interface IAuthService {
     User signUp(String username, String password);
     Pair<User, MultiValueMap<String, String>> login(String username, String password);
+
+    Boolean validateToken(String token, Long userid);
 }
